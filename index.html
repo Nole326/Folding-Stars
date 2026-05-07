@@ -84,6 +84,26 @@
     }
     .field input::placeholder,.field textarea::placeholder{color:#b7b1a8}
     .field input:focus,.field textarea:focus,.field select:focus{border-color:#111;box-shadow:0 0 0 4px rgba(0,0,0,.06)}
+    .password-wrap{position:relative;display:flex;align-items:center}
+    .password-wrap input{padding-right:62px}
+    .password-toggle{
+      position:absolute;right:8px;top:50%;transform:translateY(-50%);
+      border:0;background:rgba(255,255,255,.72);border-radius:13px;
+      min-width:46px;height:34px;font-size:12px;font-weight:850;color:#4f4941;
+      box-shadow:none;
+    }
+    .password-toggle:hover{filter:brightness(1.02)}
+    .captcha-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+    .captcha-code{
+      user-select:none;letter-spacing:2px;font-weight:900;color:#111;
+      min-width:104px;height:48px;border-radius:16px;border:1px solid var(--line);
+      background:
+        radial-gradient(circle at 20% 25%,rgba(244,199,216,.5) 0 12%,transparent 13%),
+        radial-gradient(circle at 78% 68%,rgba(197,228,214,.55) 0 13%,transparent 14%),
+        #fff8ef;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .captcha-code:hover{transform:translateY(-1px)}
     .primary{
       width:100%;
       padding:14px 18px;
@@ -238,6 +258,9 @@
       scroll-behavior:smooth;
       scrollbar-width:none;
       cursor:grab;
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+      touch-action:pan-y;
     }
     .canvas::-webkit-scrollbar{display:none}
     .canvas.panning{cursor:grabbing}
@@ -844,7 +867,7 @@
         <form class="login-card" id="loginForm">
           <p class="welcome">Welcome Back</p>
           <label class="field"><span>用户名</span><input id="loginName" placeholder="输入你的用户名" autocomplete="username"></label>
-          <label class="field"><span>密码</span><input id="loginPassword" type="password" placeholder="输入你的密码" autocomplete="current-password"></label>
+          <label class="field"><span>密码</span><span class="password-wrap"><input id="loginPassword" type="password" placeholder="输入你的密码" autocomplete="current-password"><button class="password-toggle" type="button" data-toggle-password="loginPassword">显示</button></span></label>
           <button class="primary" type="submit">Enter</button>
           <div class="login-actions">
             <button class="text-btn" type="button" id="openRegisterBtn">还没有账号？去注册</button>
@@ -969,8 +992,9 @@
         <div class="modal-head"><h2>注册账号</h2><button class="close" data-close="registerModal">×</button></div>
         <div class="avatar-picker" id="registerAvatarPicker"></div>
         <label class="field"><span>用户名</span><input id="registerName" placeholder="设置你的用户名" autocomplete="username"></label>
-        <label class="field"><span>密码</span><input id="registerPassword" type="password" placeholder="设置登录密码" autocomplete="new-password"></label>
-        <label class="field"><span>确认密码</span><input id="registerPasswordConfirm" type="password" placeholder="再次输入密码" autocomplete="new-password"></label>
+        <label class="field"><span>密码</span><span class="password-wrap"><input id="registerPassword" type="password" placeholder="设置登录密码" autocomplete="new-password"><button class="password-toggle" type="button" data-toggle-password="registerPassword">显示</button></span></label>
+        <label class="field"><span>确认密码</span><span class="password-wrap"><input id="registerPasswordConfirm" type="password" placeholder="再次输入密码" autocomplete="new-password"><button class="password-toggle" type="button" data-toggle-password="registerPasswordConfirm">显示</button></span></label>
+        <label class="field"><span>验证码</span><div class="captcha-row"><input id="registerCaptchaInput" placeholder="输入右侧验证码" autocomplete="off" autocapitalize="characters"><button class="captcha-code" type="button" id="registerCaptchaCode" title="点击刷新验证码"></button></div></label>
         <div class="editor-actions">
           <button class="primary" id="registerSubmitBtn">注册并进入</button>
           <button class="ghost" data-close="registerModal">取消</button>
@@ -1044,6 +1068,7 @@
     let dragging=null, raf=null, editingNoteId=null, detailDraftImage='', storageWarned=false, canvasPanning=null;
     let bottleInFlight=0, bottleFilledPending=false, bottleHideTimer=null, bottleLeaveTimer=null, bottleResetTimer=null;
     let remoteSaveTimer=null, remoteHydrating=false;
+    let registerCaptcha='';
 
     function load(){
       const fallback={logged:false,page:'login',sessionMode:'visitor',currentUser:'',remoteUserId:'',users:{},notes:[],completed:[],stars:0,boardMode:'small',profile:defaultProfile()};
@@ -1285,6 +1310,20 @@
     function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
     function normalizeShape(shape){return validShapes.has(shape)?shape:'star'}
     function noteTitle(n){return (n.title||'').trim() || (n.text||'').trim().slice(0,18) || '写点什么...'}
+
+    function makeCaptcha(){
+      const letters='ABCDEFGHJKLMNPQRSTUVWXYZ';
+      const digits='23456789';
+      const all=letters+digits;
+      const chars=[
+        letters[Math.floor(Math.random()*letters.length)],
+        digits[Math.floor(Math.random()*digits.length)]
+      ];
+      while(chars.length<5)chars.push(all[Math.floor(Math.random()*all.length)]);
+      registerCaptcha=chars.sort(()=>Math.random()-.5).join('');
+      const el=$("#registerCaptchaCode");
+      if(el)el.textContent=registerCaptcha;
+    }
 
     function getBoardSize(){
       const count=Math.max(state.notes.length,1);
@@ -1586,6 +1625,7 @@
     }
 
     function startCanvasPan(e){
+      if(e.pointerType==='touch')return;
       if(e.target.closest('.note') || e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select'))return;
       canvasPanning={startY:e.clientY,scrollTop:canvas.scrollTop,moved:false};
       canvas.classList.add('panning');
@@ -2033,9 +2073,24 @@ function renderSearchResults(){
     row.appendChild(action);
     root.appendChild(row);
   });
-}
+    }
     const registerBtn=$("#openRegisterBtn");
-    if(registerBtn)registerBtn.onclick=()=>$("#registerModal").classList.add("show");
+    if(registerBtn)registerBtn.onclick=()=>{
+      makeCaptcha();
+      $("#registerCaptchaInput").value="";
+      $("#registerModal").classList.add("show");
+    };
+    const captchaBtn=$("#registerCaptchaCode");
+    if(captchaBtn)captchaBtn.onclick=makeCaptcha;
+    document.querySelectorAll("[data-toggle-password]").forEach(btn=>{
+      btn.onclick=()=>{
+        const input=$("#"+btn.dataset.togglePassword);
+        if(!input)return;
+        const visible=input.type==="text";
+        input.type=visible?"password":"text";
+        btn.textContent=visible?"显示":"隐藏";
+      };
+    });
     const registerAvatarInput=$("#registerAvatarInput");
     if(registerAvatarInput)registerAvatarInput.onchange=e=>readImage(e.target,img=>{registerDraft.avatar=img; registerDraft.avatarEmoji=""; renderAvatarPickers()},360);
     const registerSubmitBtn=$("#registerSubmitBtn");
@@ -2043,9 +2098,17 @@ function renderSearchResults(){
       const username=$("#registerName").value.trim();
       const password=$("#registerPassword").value;
       const confirm=$("#registerPasswordConfirm").value;
+      const captcha=$("#registerCaptchaInput").value.trim().toUpperCase();
       if(!username){alert("请输入用户名。"); return;}
       if(!password){alert("请输入密码。"); return;}
       if(password!==confirm){alert("两次输入的密码不一致。"); return;}
+      if(!registerCaptcha)makeCaptcha();
+      if(captcha!==registerCaptcha){
+        alert("验证码不正确，请重新输入。");
+        makeCaptcha();
+        $("#registerCaptchaInput").value="";
+        return;
+      }
       const profile={...defaultProfile(username),avatar:registerDraft.avatar||"",avatarEmoji:registerDraft.avatar?"":(registerDraft.avatarEmoji||"🐱")};
       registerSubmitBtn.disabled=true;
       registerSubmitBtn.textContent='注册中...';
@@ -2057,6 +2120,7 @@ function renderSearchResults(){
       $("#registerName").value="";
       $("#registerPassword").value="";
       $("#registerPasswordConfirm").value="";
+      $("#registerCaptchaInput").value="";
       $("#registerModal").classList.remove("show");
     };
 
