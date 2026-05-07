@@ -79,6 +79,7 @@
       background:#fffaf2;
       border-radius:18px;
       padding:14px 16px;
+      font-size:16px;
       outline:none;
       transition:.18s ease;
     }
@@ -846,12 +847,73 @@
         flex-basis:48px;
       }
       .canvas{inset:74px 0 74px}
-      .note{width:158px;min-height:136px;padding:22px 14px 14px}
+      .note,
+      .screen.small-mode .note{
+        width:158px;
+        min-height:136px;
+        padding:22px 14px 14px;
+      }
+      .screen.large-mode .note{
+        width:132px;
+        min-height:116px;
+        padding:18px 12px 12px;
+      }
+      .screen.small-mode .note.star{
+        width:178px;
+        min-height:164px;
+        padding:58px 34px 30px;
+      }
+      .screen.large-mode .note.star{
+        width:154px;
+        min-height:142px;
+        padding:50px 28px 24px;
+      }
+      .screen.small-mode .note.heart{
+        width:178px;
+        min-height:160px;
+        padding:54px 32px 28px;
+      }
+      .screen.large-mode .note.heart{
+        width:154px;
+        min-height:140px;
+        padding:46px 26px 24px;
+      }
+      .note-title,
+      .screen.small-mode .note-title{font-size:16px;padding-top:14px}
+      .screen.large-mode .note-title{font-size:14px;padding-top:12px}
+      .note.star .note-title,
+      .screen.small-mode .note.star .note-title,
+      .screen.large-mode .note.star .note-title{font-size:14px;padding:0}
+      .note .note-status,
+      .screen.small-mode .note .note-status{right:18px;top:20px;font-size:11px;gap:5px}
+      .screen.large-mode .note .note-status{right:16px;top:18px;font-size:10px;gap:4px}
+      .note.star .note-status,
+      .screen.small-mode .note.star .note-status{right:30px;top:38px}
+      .screen.large-mode .note.star .note-status{right:24px;top:32px}
+      .note .tag-row,
+      .screen.small-mode .note .tag-row{left:12px;top:8px;font-size:11px}
+      .note.star .tag-row,
+      .screen.small-mode .note.star .tag-row{left:28px;top:18px}
+      .screen.large-mode .note.star .tag-row{left:24px;top:16px}
+      .note-actions,
+      .screen.small-mode .note .note-actions{right:16px;bottom:8px}
+      .screen.large-mode .note .note-actions{right:14px;bottom:7px}
+      .note.star .note-actions,
+      .screen.small-mode .note.star .note-actions{right:30px;bottom:14px}
+      .screen.large-mode .note.star .note-actions{right:24px;bottom:12px}
+      .mini-btn,
+      .screen.small-mode .note .mini-btn{padding:6px 9px;font-size:11px}
+      .screen.large-mode .note .mini-btn{padding:5px 8px;font-size:10px}
+      .record{
+        right:12px;
+        bottom:84px;
+        max-width:calc(100vw - 24px);
+        font-size:13px;
+      }
       .create-row,.achievement-layout,.search-item{grid-template-columns:1fr}
       .profile-card{align-items:flex-start}
       .avatar{width:82px;height:82px}
       .tab{min-width:98px}
-      .record{right:12px;bottom:84px;font-size:13px}
     }
   </style>
 </head>
@@ -1159,6 +1221,7 @@
     }
 
     function loginUser(username){
+      if(document.activeElement && document.activeElement.blur)document.activeElement.blur();
       const record=normalizeUser(username,state.users[username]);
       state.users[username]=record;
       state.logged=true;
@@ -1571,6 +1634,7 @@
     function addNoteEl(n){
       const el=document.createElement('article');
       n.shape=normalizeShape(n.shape);
+      clampNotePosition(n);
       el.className=`note ${n.shape}`;
       el.dataset.id=n.id;
       el.style.background=n.color;
@@ -1680,11 +1744,24 @@
     }
 
     function canvasReady(){return memo.classList.contains('active') && canvas.clientWidth > 40 && canvas.clientHeight > 40}
+    function isMobileLayout(){return innerWidth<=720}
     function noteSize(n){
       const large=state.boardMode==='large';
+      if(isMobileLayout()){
+        if(n.shape==='star')return large ? {w:154,h:142} : {w:178,h:164};
+        if(n.shape==='heart')return large ? {w:154,h:140} : {w:178,h:160};
+        return large ? {w:132,h:116} : {w:158,h:136};
+      }
       if(n.shape==='star')return large ? {w:194,h:176} : {w:238,h:218};
       if(n.shape==='heart')return large ? {w:194,h:174} : {w:238,h:214};
       return large ? {w:160,h:132} : {w:198,h:160};
+    }
+
+    function clampNotePosition(n){
+      const size=noteSize(n);
+      const boardSize=getBoardSize();
+      n.x=Math.max(8,Math.min(boardSize.width-size.w-8,Number(n.x)||120));
+      n.y=Math.max(8,Math.min(boardSize.height-size.h-8,Number(n.y)||120));
     }
 
     function createMorphClone(el,color){
