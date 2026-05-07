@@ -685,6 +685,27 @@
       font-weight:900;color:#4a443d;box-shadow:0 10px 26px rgba(37,30,23,.09);
     }
     .confetti{position:absolute;inset:0;pointer-events:none;z-index:31;overflow:hidden}
+    .sync-status{
+      position:fixed;right:18px;top:96px;z-index:32;
+      max-width:260px;padding:8px 12px;border-radius:999px;
+      background:rgba(255,250,242,.82);border:1px solid var(--line);
+      color:#5f574e;font-size:12px;font-weight:850;
+      box-shadow:0 10px 24px rgba(35,30,24,.08);
+      backdrop-filter:blur(10px);opacity:0;transform:translateY(-6px);
+      pointer-events:none;transition:.22s ease;
+    }
+    .sync-status.show{opacity:1;transform:translateY(0)}
+    .sync-status.warn{color:#8a5a20}
+    .sync-status.error{color:#9f3030}
+    .loading-overlay{
+      position:fixed;inset:0;display:none;place-items:center;z-index:40;
+      background:rgba(246,239,228,.42);backdrop-filter:blur(5px);
+    }
+    .loading-overlay.show{display:grid}
+    .loading-card{
+      border:1px solid var(--line);border-radius:24px;background:rgba(255,250,242,.88);
+      padding:18px 24px;font-weight:900;box-shadow:0 24px 58px rgba(35,30,24,.15);
+    }
     .ribbon{position:absolute;width:10px;height:28px;border-radius:4px;animation:fall 1.8s ease-out forwards}
     @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:0}}
     .me-page{overflow:auto;padding-bottom:100px}
@@ -910,6 +931,7 @@
         max-width:calc(100vw - 24px);
         font-size:13px;
       }
+      .sync-status{top:auto;right:12px;bottom:154px;max-width:calc(100vw - 24px)}
       .create-row,.achievement-layout,.search-item{grid-template-columns:1fr}
       .profile-card{align-items:flex-start}
       .avatar{width:82px;height:82px}
@@ -1102,6 +1124,8 @@
     <input class="hidden-file" id="avatarInput" type="file" accept="image/*">
     <input class="hidden-file" id="detailPhotoInput" type="file" accept="image/*">
     <div class="confetti" id="confetti"></div>
+    <div class="sync-status" id="syncStatus">已保存</div>
+    <div class="loading-overlay" id="loadingOverlay"><div class="loading-card" id="loadingText">正在加载...</div></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1109,8 +1133,9 @@
     const LS_KEY='foldingStars.v2';
     const SUPABASE_URL='https://ajkuywayynxrrypilqhk.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY='sb_publishable_8VHvQYNItA9CWi2EhSjVdQ_q-A7JT6c';
+    const IMAGE_BUCKET='folding-stars-images';
     const supabaseClient=window.supabase
-      ? window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
+      ? window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}})
       : null;
     const shapes=[['star','星形'],['square','方形'],['circle','圆形'],['hex','六边形'],['heart','爱心型'],['poly','多边形'],['blob','不规则形']];
     const validShapes=new Set(shapes.map(s=>s[0]));
@@ -1129,7 +1154,7 @@
     let registerDraft={avatar:'',avatarEmoji:'🐱'};
     let dragging=null, raf=null, editingNoteId=null, detailDraftImage='', storageWarned=false, canvasPanning=null;
     let bottleInFlight=0, bottleFilledPending=false, bottleHideTimer=null, bottleLeaveTimer=null, bottleResetTimer=null;
-    let remoteSaveTimer=null, remoteHydrating=false;
+    let remoteSaveTimer=null, remoteHydrating=false, remoteUpdatedAt='', remoteDirty=false, syncStatusTimer=null;
     let registerCaptcha='';
 
     function load(){
@@ -1142,10 +1167,14 @@
         const next={...fallback,...saved,users};
         next.logged=false;
         next.sessionMode='visitor';
-        next.currentUser='';
-        next.remoteUserId='';
-        next.page='login';
-        Object.assign(next, emptyWorkspace());
+        next.currentUser=saved.currentUser||'';
+        next.remoteUserId=saved.remoteUserId||'';
+        next.page=saved.page&&saved.page!=='login'?saved.page:'memo';
+        if(next.currentUser && users[next.currentUser]){
+          applyWorkspace(next,users[next.currentUser]);
+        }else{
+          Object.assign(next, emptyWorkspace());
+        }
         return next;
       }catch{
         return fallback;
@@ -1157,7 +1186,6 @@
       const completed=(record.completed||[]).map(item=>({...item,shape:normalizeShape(item.shape)}));
       const notes=(record.notes||[]).filter(item=>item.shape!=='wavy').map(item=>({...item,shape:normalizeShape(item.shape)}));
       return {
-        password:String(record.password||''),
         notes,
         completed,
         stars:completed.length,
@@ -1179,7 +1207,6 @@
       const current=state.users[state.currentUser]||normalizeUser(state.currentUser,{});
       state.users[state.currentUser]={
         ...current,
-        password:current.password,
         notes:deepClone(state.notes),
         completed:deepClone(state.completed),
         stars:state.completed.length,
@@ -1188,18 +1215,22 @@
       };
     }
 
+    function persistLocalOnly(){
+      syncCurrentUser();
+      const persist={
+        logged:state.logged,
+        page:state.page,
+        sessionMode:state.sessionMode,
+        currentUser:state.currentUser,
+        remoteUserId:state.remoteUserId||'',
+        users:state.users
+      };
+      localStorage.setItem(LS_KEY,JSON.stringify(persist));
+    }
+
     function save(){
       try{
-        syncCurrentUser();
-        const persist={
-          logged:state.logged,
-          page:state.page,
-          sessionMode:state.sessionMode,
-          currentUser:state.currentUser,
-          remoteUserId:state.remoteUserId||'',
-          users:state.users
-        };
-        localStorage.setItem(LS_KEY,JSON.stringify(persist));
+        persistLocalOnly();
         scheduleRemoteSave();
         return true;
       }catch(err){
@@ -1262,15 +1293,141 @@
       });
     }
 
+    function setSyncStatus(text,type='ok',sticky=false){
+      const el=$('#syncStatus');
+      if(!el)return;
+      el.textContent=text;
+      el.className=`sync-status show ${type==='warn'?'warn':type==='error'?'error':''}`;
+      clearTimeout(syncStatusTimer);
+      if(!sticky)syncStatusTimer=setTimeout(()=>el.classList.remove('show'),2400);
+    }
+
+    function setLoading(show,text='正在加载...'){
+      const overlay=$('#loadingOverlay');
+      if(!overlay)return;
+      $('#loadingText').textContent=text;
+      overlay.classList.toggle('show',!!show);
+    }
+
+    function isDataUrl(value){return typeof value==='string' && value.startsWith('data:image/')}
+
+    function dataUrlToBlob(dataUrl){
+      const [meta,data]=dataUrl.split(',');
+      const mime=(meta.match(/data:(.*?);/)||[])[1]||'image/jpeg';
+      const binary=atob(data);
+      const bytes=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+      return new Blob([bytes],{type:mime});
+    }
+
+    async function uploadDataUrl(dataUrl,folder,id='image'){
+      if(!(supabaseClient && state.remoteUserId && isDataUrl(dataUrl)))return dataUrl;
+      const blob=dataUrlToBlob(dataUrl);
+      const path=`${state.remoteUserId}/${folder}/${id}-${Date.now()}.jpg`;
+      const {error}=await supabaseClient.storage
+        .from(IMAGE_BUCKET)
+        .upload(path,blob,{contentType:blob.type||'image/jpeg',upsert:true});
+      if(error)throw error;
+      const {data}=supabaseClient.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      return data.publicUrl;
+    }
+
+    async function ensureRemoteImages(){
+      let changed=false;
+      if(isDataUrl(state.profile.avatar)){
+        state.profile.avatar=await uploadDataUrl(state.profile.avatar,'avatars','profile');
+        changed=true;
+      }
+      for(const n of state.notes){
+        if(isDataUrl(n.image)){
+          n.image=await uploadDataUrl(n.image,'notes',n.id||uid());
+          changed=true;
+        }
+      }
+      for(const n of state.completed){
+        if(isDataUrl(n.image)){
+          n.image=await uploadDataUrl(n.image,'completed',n.id||uid());
+          changed=true;
+        }
+      }
+      if(changed){
+        syncCurrentUser();
+        persistLocalOnly();
+        renderNotes();
+        renderProfile();
+      }
+    }
+
+    async function fetchNormalizedWorkspace(userId,username){
+      const [profileRes,notesRes,completedRes]=await Promise.all([
+        supabaseClient.from('folding_profiles').select('*').eq('user_id',userId).maybeSingle(),
+        supabaseClient.from('folding_notes').select('*').eq('user_id',userId),
+        supabaseClient.from('folding_completed').select('*').eq('user_id',userId)
+      ]);
+      if(profileRes.error || notesRes.error || completedRes.error)return null;
+      if(!profileRes.data && !notesRes.data?.length && !completedRes.data?.length)return null;
+      const notes=(notesRes.data||[]).map(row=>({
+        id:row.id, title:row.title, text:row.text, shape:row.shape, color:row.color,
+        weather:row.weather, mood:row.mood, tag:row.tag, image:row.image_url||'',
+        x:Number(row.x)||120, y:Number(row.y)||120
+      }));
+      const completed=(completedRes.data||[]).map(row=>({
+        id:row.id, title:row.title, text:row.text, shape:row.shape, color:row.color,
+        weather:row.weather, mood:row.mood, tag:row.tag, image:row.image_url||'',
+        x:Number(row.x)||120, y:Number(row.y)||120,
+        completedAt:row.completed_at?new Date(row.completed_at).getTime():Date.now(),
+        starColor:row.star_color||row.color
+      }));
+      return normalizeUser(username,{
+        notes,
+        completed,
+        boardMode:profileRes.data?.board_mode||'small',
+        profile:profileRes.data?.profile||defaultProfile(username)
+      });
+    }
+
+    async function saveNormalizedWorkspace(){
+      if(!(supabaseClient && state.remoteUserId))return;
+      const user_id=state.remoteUserId;
+      await supabaseClient.from('folding_profiles').upsert({
+        user_id,
+        username:state.currentUser,
+        board_mode:state.boardMode,
+        profile:deepClone(state.profile)
+      },{onConflict:'user_id'});
+      await Promise.all([
+        supabaseClient.from('folding_notes').delete().eq('user_id',user_id),
+        supabaseClient.from('folding_completed').delete().eq('user_id',user_id)
+      ]);
+      if(state.notes.length){
+        await supabaseClient.from('folding_notes').insert(state.notes.map(n=>({
+          user_id,id:n.id,title:n.title||'',text:n.text||'',shape:normalizeShape(n.shape),color:n.color,
+          weather:n.weather||'',mood:n.mood||'',tag:n.tag||'其他',image_url:n.image||'',x:n.x||120,y:n.y||120
+        })));
+      }
+      if(state.completed.length){
+        await supabaseClient.from('folding_completed').insert(state.completed.map(n=>({
+          user_id,id:n.id,title:n.title||'',text:n.text||'',shape:normalizeShape(n.shape),color:n.color,
+          weather:n.weather||'',mood:n.mood||'',tag:n.tag||'其他',image_url:n.image||'',x:n.x||120,y:n.y||120,
+          completed_at:new Date(n.completedAt||Date.now()).toISOString(),star_color:n.starColor||n.color
+        })));
+      }
+    }
+
     async function fetchRemoteWorkspace(userId,username){
       if(!supabaseClient)throw new Error('Supabase 客户端没有加载成功，请检查网络。');
+      const normalized=await fetchNormalizedWorkspace(userId,username);
+      if(normalized)return normalized;
       const {data,error}=await supabaseClient
         .from('folding_workspaces')
         .select('*')
         .eq('user_id',userId)
         .maybeSingle();
       if(error)throw error;
-      if(data)return workspaceFromRow(data,username);
+      if(data){
+        remoteUpdatedAt=data.updated_at||'';
+        return workspaceFromRow(data,username);
+      }
       const workspace=normalizeUser(username,{profile:defaultProfile(username)});
       const {error:insertError}=await supabaseClient.from('folding_workspaces').insert({
         user_id:userId,
@@ -1285,24 +1442,58 @@
     }
 
     function scheduleRemoteSave(){
+      remoteDirty=true;
+      if(!navigator.onLine){setSyncStatus('离线中，本地暂存','warn',true); return;}
       if(remoteHydrating || !(supabaseClient && state.logged && state.sessionMode==='user' && state.remoteUserId))return;
       clearTimeout(remoteSaveTimer);
-      remoteSaveTimer=setTimeout(()=>saveRemoteNow().catch(err=>console.warn('Supabase sync failed:',err)),500);
+      setSyncStatus('正在同步...','warn',true);
+      remoteSaveTimer=setTimeout(()=>saveRemoteNow().catch(err=>{
+        console.warn('Supabase sync failed:',err);
+        setSyncStatus('同步失败，本地已暂存','error',true);
+      }),500);
     }
 
     async function saveRemoteNow(){
       if(!(supabaseClient && state.logged && state.sessionMode==='user' && state.remoteUserId))return;
-      const {error}=await supabaseClient
+      if(!navigator.onLine){setSyncStatus('离线中，本地暂存','warn',true); return;}
+      await ensureRemoteImages();
+      const current=await supabaseClient
         .from('folding_workspaces')
-        .upsert(workspacePayload(),{onConflict:'user_id'});
+        .select('updated_at')
+        .eq('user_id',state.remoteUserId)
+        .maybeSingle();
+      const serverUpdated=current.data?.updated_at||'';
+      if(remoteUpdatedAt && serverUpdated && new Date(serverUpdated)>new Date(remoteUpdatedAt) && remoteDirty){
+        const overwrite=confirm('云端数据似乎已在其他设备更新。要用当前页面内容覆盖云端吗？选择“取消”将重新载入云端版本。');
+        if(!overwrite){
+          const workspace=await fetchRemoteWorkspace(state.remoteUserId,state.currentUser);
+          state.users[state.currentUser]=workspace;
+          applyWorkspace(state,workspace);
+          persistLocalOnly();
+          renderNotes(); renderProfile(); renderAchievements(); renderSearchResults();
+          setSyncStatus('已载入云端更新');
+          remoteDirty=false;
+          return;
+        }
+      }
+      const {data,error}=await supabaseClient
+        .from('folding_workspaces')
+        .upsert(workspacePayload(),{onConflict:'user_id'})
+        .select('updated_at')
+        .single();
       if(error)throw error;
+      remoteUpdatedAt=data?.updated_at||new Date().toISOString();
+      saveNormalizedWorkspace().catch(err=>console.warn('Normalized sync skipped:',err));
+      remoteDirty=false;
+      setSyncStatus('已同步');
     }
 
     async function loginRemote(username,password){
       if(!supabaseClient){alert('Supabase 客户端没有加载成功，请检查网络后重试。'); return;}
+      setLoading(true,'正在登录并读取云端数据...');
       const email=usernameToAuthEmail(username);
       const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});
-      if(error){alert('用户名或密码不正确。'); return;}
+      if(error){setLoading(false); alert('用户名或密码不正确。'); return;}
       remoteHydrating=true;
       try{
         state.remoteUserId=data.user.id;
@@ -1310,16 +1501,19 @@
         state.users[username]=workspace;
         applyWorkspace(state,workspace);
         loginUser(username);
+        setSyncStatus('云端数据已加载');
       }catch(err){
         console.error(err);
         alert('已登录，但读取云端数据失败。请确认 Supabase 数据表已创建。');
       }finally{
         remoteHydrating=false;
+        setLoading(false);
       }
     }
 
     async function registerRemote(username,password,profile){
       if(!supabaseClient){alert('Supabase 客户端没有加载成功，请检查网络后重试。'); return false;}
+      setLoading(true,'正在创建账号...');
       const email=usernameToAuthEmail(username);
       const {data,error}=await supabaseClient.auth.signUp({
         email,
@@ -1327,11 +1521,13 @@
         options:{data:{username}}
       });
       if(error){
+        setLoading(false);
         alert(error.message.includes('already')?'这个用户名已经被注册了。':'注册失败：'+error.message);
         return false;
       }
       const userId=data.user?.id;
       if(!userId){
+        setLoading(false);
         alert('注册已提交，但 Supabase 仍要求邮箱确认。请在 Supabase 里关闭 Confirm email。');
         return false;
       }
@@ -1347,6 +1543,7 @@
         await saveRemoteNow();
         show('memo');
         save();
+        setSyncStatus('账号已创建并同步');
         return true;
       }catch(err){
         console.error(err);
@@ -1354,11 +1551,82 @@
         return false;
       }finally{
         remoteHydrating=false;
+        setLoading(false);
       }
     }
 
-    function logoutToLogin(){
+    async function restoreSession(){
+      if(!supabaseClient){
+        state.logged=false;
+        state.sessionMode='visitor';
+        show('login');
+        return;
+      }
+      setLoading(true,'正在恢复登录状态...');
+      try{
+        const {data,error}=await supabaseClient.auth.getSession();
+        if(error)throw error;
+        const session=data?.session;
+        if(!session?.user){
+          state.logged=false;
+          state.sessionMode='visitor';
+          state.remoteUserId='';
+          show('login');
+          return;
+        }
+        const username=session.user.user_metadata?.username || state.currentUser;
+        if(!username){
+          await supabaseClient.auth.signOut().catch(()=>{});
+          state.logged=false;
+          state.sessionMode='visitor';
+          state.remoteUserId='';
+          show('login');
+          return;
+        }
+        remoteHydrating=true;
+        state.remoteUserId=session.user.id;
+        state.currentUser=username;
+        state.sessionMode='user';
+        state.logged=true;
+        try{
+          const workspace=await fetchRemoteWorkspace(session.user.id,username);
+          state.users[username]=workspace;
+          applyWorkspace(state,workspace);
+          setSyncStatus('登录状态已恢复');
+        }catch(err){
+          const cached=state.users[username];
+          if(!cached)throw err;
+          const workspace=normalizeUser(username,cached);
+          state.users[username]=workspace;
+          applyWorkspace(state,workspace);
+          setSyncStatus('云端暂不可用，已使用本地缓存','warn',true);
+        }
+        state.page=state.page&&state.page!=='login'?state.page:'memo';
+        persistLocalOnly();
+        renderNotes();
+        renderProfile();
+        renderAchievements();
+        renderSearchResults();
+        show(state.page);
+      }catch(err){
+        console.warn('Restore session failed:',err);
+        state.logged=false;
+        state.sessionMode='visitor';
+        state.remoteUserId='';
+        show('login');
+        setSyncStatus('登录状态恢复失败，请重新登录','warn');
+      }finally{
+        remoteHydrating=false;
+        setLoading(false);
+      }
+    }
+
+    async function logoutToLogin(){
       syncCurrentUser();
+      clearTimeout(remoteSaveTimer);
+      if(supabaseClient){
+        await supabaseClient.auth.signOut().catch(()=>{});
+      }
       state.logged=false;
       state.sessionMode='visitor';
       state.currentUser='';
@@ -2080,6 +2348,22 @@
       input.value='';
     }
 
+    async function handlePickedImage(input,done,maxSize=720,folder='images',id='image'){
+      readImage(input,async dataUrl=>{
+        done(dataUrl);
+        if(!(supabaseClient && state.logged && state.remoteUserId && navigator.onLine))return;
+        try{
+          setSyncStatus('正在上传图片...','warn',true);
+          const url=await uploadDataUrl(dataUrl,folder,id);
+          done(url);
+          setSyncStatus('图片已上传');
+        }catch(err){
+          console.warn('Image upload failed:',err);
+          setSyncStatus('图片暂存本地，稍后同步','warn',true);
+        }
+      },maxSize);
+    }
+
     function searchItems(query){
   const q=query.trim().toLowerCase();
   if(!q)return [];
@@ -2227,9 +2511,9 @@ function renderSearchResults(){
     canvas.addEventListener('pointerdown',startCanvasPan);
     $('#noteSearchInput').oninput=renderSearchResults;
     $('#notePhotoBtn').onclick=()=>$('#notePhotoInput').click();
-    $('#notePhotoInput').onchange=e=>readImage(e.target,img=>{selected.image=img; $('#notePhotoPreview').src=img; $('#notePhotoPreview').classList.add('show')},640);
+    $('#notePhotoInput').onchange=e=>handlePickedImage(e.target,img=>{selected.image=img; $('#notePhotoPreview').src=img; $('#notePhotoPreview').classList.add('show')},640,'notes','draft');
     $("#detailPhotoBtn").onclick=()=>$("#detailPhotoInput").click();
-    $("#detailPhotoInput").onchange=e=>readImage(e.target,img=>updateDetailImagePanel(img),640);
+    $("#detailPhotoInput").onchange=e=>handlePickedImage(e.target,img=>updateDetailImagePanel(img),640,'notes',editingNoteId||'detail');
     $("#detailPhotoRemoveBtn").onclick=()=>updateDetailImagePanel("");
     $("#createNoteBtn").onclick=()=>{
       const text=$("#contentInput").value.trim();
@@ -2281,7 +2565,7 @@ function renderSearchResults(){
     $("#editProfileBtn").onclick=openProfile;
     $("#logoutBtn").onclick=logoutToLogin;
     $("#archiveSearch").oninput=e=>renderArchive(e.target.value);
-    $("#avatarInput").onchange=e=>readImage(e.target,img=>{state.profile.avatar=img; state.profile.avatarEmoji=""; save(); renderProfile()},360);
+    $("#avatarInput").onchange=e=>handlePickedImage(e.target,img=>{state.profile.avatar=img; state.profile.avatarEmoji=""; save(); renderProfile()},360,'avatars','profile');
     $("#saveProfileBtn").onclick=()=>{
       state.profile.name=$("#profileName").value.trim()||(state.currentUser||"Folding Star");
       state.profile.gender=$("#profileGender").value;
@@ -2291,13 +2575,14 @@ function renderSearchResults(){
       $("#profileModal").classList.remove("show");
     };
 
+    addEventListener('offline',()=>setSyncStatus('离线中，本地暂存','warn',true));
+    addEventListener('online',()=>{
+      setSyncStatus('网络已恢复，正在同步...','warn',true);
+      if(remoteDirty)scheduleRemoteSave();
+    });
     addEventListener('resize',()=>renderNotes());
     initChoices();
-    renderNotes();
-    renderProfile();
-    renderAchievements();
-    renderSearchResults();
-    show(state.logged&&state.page!=='login'?state.page:'login');
+    restoreSession();
   </script>
 </body>
 </html>
