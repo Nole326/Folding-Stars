@@ -18,6 +18,7 @@
       --peach:#f5ccb0;
       --lav:#d9cbee;
       --shadow:0 18px 48px rgba(42,35,27,.13);
+      --heart-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 230 206'%3E%3Cpath fill='black' d='M115 190 C70 154 26 116 24 74 C22 36 48 16 79 23 C96 27 108 39 115 53 C122 39 134 27 151 23 C182 16 208 36 206 74 C204 116 160 154 115 190 Z'/%3E%3C/svg%3E");
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -171,7 +172,12 @@
     .shape-circle{border-radius:50%}
     .shape-square{border-radius:22px;transform:rotate(-8deg)}
     .shape-hex{clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)}
-    .shape-heart{border-radius:0;clip-path:path("M24 43 C-6 18 7 -7 24 10 C41 -7 54 18 24 43 Z")}
+    .shape-heart{
+      border-radius:0;
+      clip-path:none;
+      -webkit-mask:var(--heart-mask) center/100% 100% no-repeat;
+      mask:var(--heart-mask) center/100% 100% no-repeat;
+    }
     .shape-poly{clip-path:polygon(18% 7%,83% 0,100% 43%,81% 96%,25% 100%,0 62%)}
     .shape-blob{border-radius:58% 42% 55% 45% / 39% 57% 43% 61%}
     .topbar{
@@ -447,10 +453,14 @@
       padding:56px 34px 28px;
     }
     .screen.large-mode .note.heart:before{
-      clip-path:path("M97 160 C59 130 23 98 21 62 C19 32 41 16 66 22 C80 25 91 34 97 45 C103 34 114 25 128 22 C153 16 175 32 173 62 C171 98 135 130 97 160 Z");
+      clip-path:none!important;
+      -webkit-mask:var(--heart-mask) center/100% 100% no-repeat;
+      mask:var(--heart-mask) center/100% 100% no-repeat;
     }
     .screen.large-mode .note.heart .note-shadow:before{
-      clip-path:path("M97 160 C59 130 23 98 21 62 C19 32 41 16 66 22 C80 25 91 34 97 45 C103 34 114 25 128 22 C153 16 175 32 173 62 C171 98 135 130 97 160 Z");
+      clip-path:none!important;
+      -webkit-mask:var(--heart-mask) center/100% 100% no-repeat;
+      mask:var(--heart-mask) center/100% 100% no-repeat;
     }
     .screen.large-mode .note.heart .note-title{padding-top:8px}
     .screen.large-mode .note.heart .note-img{right:44px;top:86px;width:42px;height:42px}
@@ -498,7 +508,11 @@
       width:230px;min-height:206px;background:transparent!important;display:block;
       clip-path:none;padding:68px 42px 34px;box-shadow:none;overflow:visible;
     }
-    .note.heart:before,.note.heart .note-shadow:before{clip-path:path("M115 190 C70 154 26 116 24 74 C22 36 48 16 79 23 C96 27 108 39 115 53 C122 39 134 27 151 23 C182 16 208 36 206 74 C204 116 160 154 115 190 Z")}
+    .note.heart:before,.note.heart .note-shadow:before{
+      clip-path:none!important;
+      -webkit-mask:var(--heart-mask) center/100% 100% no-repeat;
+      mask:var(--heart-mask) center/100% 100% no-repeat;
+    }
     .note.heart .note-title{padding:10px 0 0 0}
     .note.heart.has-image .note-title{padding-right:54px}
     .note.heart .note-img{right:54px;top:104px;width:48px;height:48px}
