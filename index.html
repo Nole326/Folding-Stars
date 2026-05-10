@@ -1704,6 +1704,26 @@
       drawBottleStars($('#bottle'),currentBottleItems(false));
     }
 
+    function playFloatShape(el){
+      const dx=(Math.random()*30-15).toFixed(1);
+      const dy=(Math.random()*28-22).toFixed(1);
+      const rot=(Math.random()*26-13).toFixed(1);
+      const scale=(1.02+Math.random()*.06).toFixed(2);
+      el.style.transform=`translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${scale})`;
+      clearTimeout(el._shapeTimer);
+      el._shapeTimer=setTimeout(()=>{el.style.transform='';},420);
+    }
+
+    function bindFloatShapeInteraction(el){
+      if(!el || el.dataset.floatBound)return;
+      el.dataset.floatBound='1';
+      el.addEventListener('mouseenter',()=>playFloatShape(el));
+      el.addEventListener('pointerdown',e=>{
+        e.stopPropagation();
+        playFloatShape(el);
+      });
+    }
+
     function buildMemoBackground(){
       const size=getBoardSize();
       const viewportH=Math.max(canvas.clientHeight||720,720);
@@ -1762,15 +1782,7 @@
         el.style.background=spec.color;
         el.style.top=Math.round(top)+'px';
         el.style.left=Math.round(left)+'px';
-        el.onmouseenter=()=>{
-          const dx=(Math.random()*30-15).toFixed(1);
-          const dy=(Math.random()*28-22).toFixed(1);
-          const rot=(Math.random()*26-13).toFixed(1);
-          const scale=(1.02+Math.random()*.06).toFixed(2);
-          el.style.transform=`translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${scale})`;
-          clearTimeout(el._shapeTimer);
-          el._shapeTimer=setTimeout(()=>{el.style.transform='';},420);
-        };
+        bindFloatShapeInteraction(el);
         memoBg.appendChild(el);
       }
     }
@@ -2596,6 +2608,7 @@ function renderSearchResults(){
     });
     addEventListener('resize',()=>renderNotes());
     initChoices();
+    document.querySelectorAll('.float-shape').forEach(bindFloatShapeInteraction);
     restoreSession();
   </script>
 </body>
