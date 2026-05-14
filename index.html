@@ -3,7 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fbf5ea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Folding Stars">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Folding Stars">
+  <meta name="description" content="Folding Stars 是一个低饱和马卡龙风格的个人备忘录与星星收集应用。">
   <title>Folding Stars</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <style>
     :root{
       --cream:#fbf5ea;
@@ -2607,6 +2617,13 @@ function renderSearchResults(){
       if(remoteDirty)scheduleRemoteSave();
     });
     addEventListener('resize',()=>renderNotes());
+    if('serviceWorker' in navigator && location.protocol !== 'file:'){
+      addEventListener('load',()=>{
+        navigator.serviceWorker.register('./service-worker.js').catch(err=>{
+          console.warn('Folding Stars service worker registration failed:',err);
+        });
+      });
+    }
     initChoices();
     document.querySelectorAll('.float-shape').forEach(bindFloatShapeInteraction);
     restoreSession();
