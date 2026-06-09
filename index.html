@@ -1,20 +1,23 @@
 ﻿<!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#fbf5ea">
+  <!-- Folding Stars PWA metadata: relative paths support GitHub Pages sub-path deployment. -->
+  <link rel="manifest" href="./manifest.webmanifest?v=1781009442">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png?v=1781009442">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=1781009442">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png?v=1781009442">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Folding Stars">
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#fbf4e8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Folding Stars">
   <meta name="description" content="Folding Stars 是一个低饱和马卡龙风格的个人备忘录与星星收集应用。">
+  <meta name="format-detection" content="telephone=no,email=no,address=no">
   <title>Folding Stars</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon-192.png" type="image/png">
-  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-  <style>
+<style>
     :root{
       --cream:#fbf5ea;
       --ink:#171615;
@@ -403,6 +406,7 @@
       padding:18px 0 0 0;word-break:break-word;
       position:relative;z-index:3;
     }
+    .note .reminder-chip{position:relative;z-index:3;margin-top:2px;align-self:flex-start}
     .note .tag-row{
       position:absolute;left:16px;top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;
       font-size:12px;font-weight:850;max-width:calc(100% + 28px);z-index:4;pointer-events:auto;
@@ -795,6 +799,18 @@
     .search-title{font-weight:850;color:#1d1b18}
     .search-meta{display:flex;gap:8px;flex-wrap:wrap;color:#817c73;font-size:13px;font-weight:750}
     .search-empty{color:var(--muted);font-weight:750}
+    .notify-card h2{margin:0;font-size:28px;line-height:1.08}
+    .notify-copy{margin:0;color:var(--muted);font-weight:760;line-height:1.5}
+    .notify-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .notify-row .primary{width:auto;min-width:148px;padding:12px 18px}
+    .notify-row .ghost{min-width:116px}
+    .reminder-chip{
+      display:inline-flex;align-items:center;gap:4px;
+      border-radius:999px;padding:4px 8px;
+      background:rgba(255,255,255,.5);
+      border:1px solid rgba(255,255,255,.45);
+      font-size:11px;font-weight:850;color:rgba(29,27,24,.72);
+    }
     .locate-btn{
       width:48px;height:48px;border-radius:999px;
       display:grid;place-items:center;
@@ -860,6 +876,7 @@
     .detail-preview.show{display:block}
     .detail-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start}
     .detail-layout > .field{margin:0}
+    #detailReminder{width:100%;max-width:100%;min-width:0;box-sizing:border-box;-webkit-appearance:none;appearance:none}
     .detail-tools{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin:0 0 2px}
     .detail-tools .mini-btn{
       background:#fff8ef;
@@ -869,16 +886,54 @@
     .detail-body{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:stretch}
     .detail-body.has-image{grid-template-columns:minmax(0,1fr) 220px}
     .detail-fields{min-width:0}
+    .detail-section-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      min-height:34px;
+      margin:0 0 8px;
+    }
+    .detail-image-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      min-height:34px;
+      margin:0 0 8px;
+    }
+    .detail-section-head span,
+    .detail-image-head > span{
+      display:block;
+      font-size:13px;
+      color:var(--muted);
+      font-weight:750;
+      padding-left:4px;
+    }
     .detail-side{display:none}
     .detail-body.has-image .detail-side{display:block}
-    .detail-side span{display:block;font-size:13px;color:var(--muted);font-weight:750;padding-left:4px;margin:12px 0 8px}
     .detail-side{min-height:100%}
+    .detail-body.has-image .detail-section-head .detail-tools{display:none}
     .detail-image-box{
       width:100%;height:320px;border-radius:18px;border:1px solid var(--line);
       background:#fffaf2;display:flex;align-items:center;justify-content:center;padding:12px;overflow:hidden;
     }
     .detail-side .detail-preview{display:block;width:100%;height:100%}
-    #detailText{resize:none;min-height:320px}
+    #detailText{
+      resize:none;
+      min-height:320px;
+      width:100%;
+      border:1px solid var(--line);
+      background:#fffaf2;
+      border-radius:18px;
+      padding:14px 16px;
+      font-size:16px;
+      outline:none;
+      transition:.18s ease;
+      box-sizing:border-box;
+    }
+    #detailText::placeholder{color:#b7b1a8}
+    #detailText:focus{border-color:#111;box-shadow:0 0 0 4px rgba(0,0,0,.06)}
     @media (max-width:720px){
       .topbar{height:74px;padding:14px 16px}
       .topbar .brand{font-size:clamp(26px,8vw,40px)}
@@ -957,6 +1012,13 @@
       }
       .sync-status{top:auto;right:12px;bottom:154px;max-width:calc(100vw - 24px)}
       .create-row,.achievement-layout,.search-item{grid-template-columns:1fr}
+      .detail-layout{gap:8px}
+      .detail-body,.detail-body.has-image{grid-template-columns:1fr;gap:10px}
+      .detail-section-head,.detail-image-head{align-items:center;margin-top:2px}
+      .detail-tools{gap:6px;flex:0 0 auto}
+      .detail-tools .mini-btn{padding:7px 10px;font-size:12px}
+      .detail-image-box{height:220px}
+      #detailText{min-height:300px}
       .profile-card{align-items:flex-start}
       .avatar{width:82px;height:82px}
       .tab{min-width:98px}
@@ -985,6 +1047,15 @@
     </section>
 <section class="screen" id="memoScreen">
       <header class="topbar">
+  <!-- Folding Stars PWA metadata: relative paths support GitHub Pages sub-path deployment. -->
+  <link rel="manifest" href="./manifest.webmanifest?v=1781009442">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png?v=1781009442">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=1781009442">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png?v=1781009442">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Folding Stars">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#fbf4e8">
         <div class="brand">Folding Stars</div>
         <div class="nav">
           <div class="board-toggle" id="boardToggle">
@@ -1010,6 +1081,15 @@
 
     <section class="screen me-page" id="meScreen">
       <header class="topbar">
+  <!-- Folding Stars PWA metadata: relative paths support GitHub Pages sub-path deployment. -->
+  <link rel="manifest" href="./manifest.webmanifest?v=1781009442">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png?v=1781009442">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=1781009442">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png?v=1781009442">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Folding Stars">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#fbf4e8">
         <div class="brand">My Stars</div>
         <div class="nav">
           <button class="icon-btn edit" id="editProfileBtn" title="编辑资料" aria-label="编辑资料"></button>
@@ -1043,6 +1123,14 @@
           <label class="field" style="margin:0"><span>关键字 / 关键词</span><input id="noteSearchInput" placeholder="搜索标题、内容、标签、天气或心情"></label>
           <div class="search-list" id="searchResults"></div>
         </section>
+        <section class="search-card notify-card">
+          <h2>提醒设置</h2>
+          <p class="notify-copy" id="notifyHint">开启后，可以给便签设置提醒时间。到点时应用会在打开或重新进入时提醒你。</p>
+          <div class="notify-row">
+            <button class="primary" type="button" id="enableNotifyBtn">开启提醒</button>
+            <button class="ghost" type="button" id="testNotifyBtn">测试通知</button>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -1056,6 +1144,7 @@
         <div class="modal-head"><h2>新建便签</h2><button class="close" data-close="noteModal">×</button></div>
         <label class="field"><span>标题</span><input id="titleInput" placeholder="写一个简短标题"></label>
         <label class="field"><span>备忘录内容</span><textarea id="contentInput" rows="4" placeholder="写下今天想记住的事"></textarea></label>
+        <label class="field"><span>提醒时间</span><input id="reminderInput" type="datetime-local"></label>
         <strong>形状</strong>
         <div class="grid" id="shapeChoices"></div>
         <strong>颜色</strong>
@@ -1122,16 +1211,25 @@
         <div class="modal-head"><h2>便签内容</h2><button class="close" data-close="detailModal">×</button></div>
         <div class="detail-layout" id="detailLayout">
           <label class="field"><span>标题</span><input id="detailTitle" placeholder="标题"></label>
-          <div class="detail-tools">
-            <button class="mini-btn" type="button" id="detailPhotoBtn">添加图片</button>
-            <button class="mini-btn" type="button" id="detailPhotoRemoveBtn">删除图片</button>
-          </div>
+          <label class="field"><span>提醒时间</span><input id="detailReminder" type="datetime-local"></label>
           <div class="detail-body" id="detailBody">
             <div class="detail-fields">
-              <label class="field"><span>备忘录内容</span><textarea id="detailText" rows="9" placeholder="写下详细内容"></textarea></label>
+              <div class="detail-section-head">
+                <span>备忘录内容</span>
+                <div class="detail-tools detail-tools-empty">
+                  <button class="mini-btn" type="button" id="detailPhotoAddBtn">添加图片</button>
+                </div>
+              </div>
+              <textarea id="detailText" rows="9" placeholder="写下详细内容"></textarea>
             </div>
             <div class="detail-side">
-              <span>图片</span>
+              <div class="detail-image-head">
+                <span>图片</span>
+                <div class="detail-tools">
+                  <button class="mini-btn" type="button" id="detailPhotoBtn">添加图片</button>
+                  <button class="mini-btn" type="button" id="detailPhotoRemoveBtn">删除图片</button>
+                </div>
+              </div>
               <div class="detail-image-box">
                 <img class="detail-preview" id="detailPreview" alt="">
               </div>
@@ -1176,7 +1274,7 @@
     const state=load();
     let selected={shape:'star',color:colors[2],weather:'☀',mood:'^_^',image:''};
     let registerDraft={avatar:'',avatarEmoji:'🐱'};
-    let dragging=null, raf=null, editingNoteId=null, detailDraftImage='', storageWarned=false, canvasPanning=null;
+    let dragging=null, raf=null, editingNoteId=null, detailDraftImage='', storageWarned=false, canvasPanning=null, reminderTimer=null, reminderChecking=false;
     let bottleInFlight=0, bottleFilledPending=false, bottleHideTimer=null, bottleLeaveTimer=null, bottleResetTimer=null;
     let remoteSaveTimer=null, remoteHydrating=false, remoteUpdatedAt='', remoteDirty=false, syncStatusTimer=null;
     let registerCaptcha='';
@@ -1205,10 +1303,23 @@
       }
     }
 
+    function normalizeNoteRecord(item={}){
+      const reminderAt=item.reminderAt||item.reminder_at||'';
+      const reminderNotifiedAt=item.reminderNotifiedAt||item.reminder_notified_at||'';
+      const reminderSetAt=item.reminderSetAt||item.reminder_set_at||'';
+      return {
+        ...item,
+        shape:normalizeShape(item.shape),
+        reminderAt,
+        reminderNotifiedAt,
+        reminderSetAt
+      };
+    }
+
     function normalizeUser(name,record={}){
       const base=emptyWorkspace(name);
-      const completed=(record.completed||[]).map(item=>({...item,shape:normalizeShape(item.shape)}));
-      const notes=(record.notes||[]).filter(item=>item.shape!=='wavy').map(item=>({...item,shape:normalizeShape(item.shape)}));
+      const completed=(record.completed||[]).map(normalizeNoteRecord);
+      const notes=(record.notes||[]).filter(item=>item.shape!=='wavy').map(normalizeNoteRecord);
       return {
         notes,
         completed,
@@ -1256,6 +1367,7 @@
       try{
         persistLocalOnly();
         scheduleRemoteSave();
+        scheduleReminderCheck();
         return true;
       }catch(err){
         if(!storageWarned){
@@ -1331,6 +1443,139 @@
       if(!overlay)return;
       $('#loadingText').textContent=text;
       overlay.classList.toggle('show',!!show);
+    }
+
+    function datetimeLocalToIso(value){
+      if(!value)return '';
+      const time=new Date(value).getTime();
+      return Number.isFinite(time) ? new Date(time).toISOString() : '';
+    }
+
+    function readReminder(input){
+      return datetimeLocalToIso(input.value);
+    }
+
+    function isoToDatetimeLocal(iso){
+      if(!iso)return '';
+      const date=new Date(iso);
+      if(!Number.isFinite(date.getTime()))return '';
+      const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);
+      return local.toISOString().slice(0,16);
+    }
+
+    function updateReminderInputMins(){
+      ['#reminderInput','#detailReminder'].forEach(selector=>{
+        const input=$(selector);
+        if(input)input.removeAttribute('min');
+      });
+    }
+
+    function isReminderArmed(note,time){
+      const setTime=new Date(note.reminderSetAt||'').getTime();
+      return !Number.isFinite(setTime) || time>setTime;
+    }
+
+    function formatReminderTime(iso){
+      if(!iso)return '';
+      const date=new Date(iso);
+      if(!Number.isFinite(date.getTime()))return '';
+      return date.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+    }
+
+    function notificationStatusText(){
+      if(!('Notification' in window))return '当前浏览器不支持通知。iPhone 请用 Safari 打开并添加到主屏幕后再试。';
+      if(Notification.permission==='granted')return '轻量提醒已开启。应用保持前台、留在后台或重新进入时，会检查到期便签并合并提醒。';
+      if(Notification.permission==='denied')return '通知已被系统拒绝。需要到 iPhone 设置里允许此网页应用的通知。';
+      return '轻量提醒未开启。点击开启后，便签提醒会在应用打开、保持前台、留在后台或重新进入时触发。';
+    }
+
+    function renderNotificationStatus(){
+      const hint=$('#notifyHint');
+      const btn=$('#enableNotifyBtn');
+      const test=$('#testNotifyBtn');
+      if(hint)hint.textContent=notificationStatusText();
+      const supported='Notification' in window;
+      if(btn){
+        btn.disabled=!supported;
+        btn.textContent=Notification.permission==='granted'?'提醒已开启':'开启提醒';
+      }
+      if(test)test.disabled=!supported || Notification.permission!=='granted';
+    }
+
+    async function showLocalNotification(title,body,noteId=''){
+      if(!('Notification' in window) || Notification.permission!=='granted')return false;
+      const options={
+        body,
+        icon:'./icons/icon-192.png',
+        badge:'./icons/icon-192.png',
+        tag:noteId?`folding-stars-${noteId}`:'folding-stars-test',
+        renotify:!!noteId,
+        data:{noteId,url:'./'}
+      };
+      try{
+        if('serviceWorker' in navigator && location.protocol!=='file:'){
+          const reg=await navigator.serviceWorker.ready;
+          if(reg && reg.showNotification){
+            await reg.showNotification(title,options);
+            return true;
+          }
+        }
+        new Notification(title,options);
+        return true;
+      }catch(err){
+        console.warn('Notification failed:',err);
+        return false;
+      }
+    }
+
+    function clearReminderTimer(){
+      clearTimeout(reminderTimer);
+      reminderTimer=null;
+    }
+
+    function scheduleReminderCheck(){
+      clearReminderTimer();
+      if(!state.logged || !state.notes?.length)return;
+      const now=Date.now();
+      const next=state.notes
+        .map(n=>({note:n,time:new Date(n.reminderAt||'').getTime()}))
+        .filter(item=>Number.isFinite(item.time) && item.time>now && item.note.reminderNotifiedAt!==item.note.reminderAt && isReminderArmed(item.note,item.time))
+        .map(item=>item.time)
+        .sort((a,b)=>a-b)[0];
+      if(!next)return;
+      reminderTimer=setTimeout(checkDueReminders,Math.max(1000,Math.min(next-now+800,2147480000)));
+    }
+
+    async function checkDueReminders(){
+      if(!state.logged || reminderChecking)return;
+      reminderChecking=true;
+      if(!('Notification' in window) || Notification.permission!=='granted'){
+        reminderChecking=false;
+        scheduleReminderCheck();
+        return;
+      }
+      const now=Date.now();
+      const due=state.notes.filter(n=>{
+        const time=new Date(n.reminderAt||'').getTime();
+        return Number.isFinite(time) && time<=now && isReminderArmed(n,time) && n.reminderNotifiedAt!==n.reminderAt;
+      });
+      if(!due.length){
+        reminderChecking=false;
+        scheduleReminderCheck();
+        return;
+      }
+      due.forEach(note=>{
+        note.reminderNotifiedAt=note.reminderAt;
+      });
+      const title=due.length===1 ? (noteTitle(due[0])||'Folding Stars 提醒') : `Folding Stars：${due.length} 张便签到时间了`;
+      const body=due.length===1
+        ? (due[0].text||'有一张便签到提醒时间了。')
+        : due.slice(0,3).map(note=>noteTitle(note)).join('、')+(due.length>3?' 等':'');
+      await showLocalNotification(title,body,due.length===1?due[0].id:'reminder-batch');
+      save();
+      renderNotes();
+      scheduleReminderCheck();
+      reminderChecking=false;
     }
 
     function isDataUrl(value){return typeof value==='string' && value.startsWith('data:image/')}
@@ -1440,8 +1685,6 @@
 
     async function fetchRemoteWorkspace(userId,username){
       if(!supabaseClient)throw new Error('Supabase 客户端没有加载成功，请检查网络。');
-      const normalized=await fetchNormalizedWorkspace(userId,username);
-      if(normalized)return normalized;
       const {data,error}=await supabaseClient
         .from('folding_workspaces')
         .select('*')
@@ -1452,6 +1695,8 @@
         remoteUpdatedAt=data.updated_at||'';
         return workspaceFromRow(data,username);
       }
+      const normalized=await fetchNormalizedWorkspace(userId,username);
+      if(normalized)return normalized;
       const workspace=normalizeUser(username,{profile:defaultProfile(username)});
       const {error:insertError}=await supabaseClient.from('folding_workspaces').insert({
         user_id:userId,
@@ -1632,6 +1877,8 @@
         renderAchievements();
         renderSearchResults();
         show(state.page);
+        scheduleReminderCheck();
+        setTimeout(checkDueReminders,1200);
       }catch(err){
         console.warn('Restore session failed:',err);
         state.logged=false;
@@ -1875,6 +2122,7 @@
       renderProfile();
       renderBoardMode();
       renderSearchResults();
+      renderNotificationStatus();
     }
 
     function shapePreviewSvg(shape){
@@ -1918,8 +2166,8 @@
     function noteHtml(n){
       const img=n.image?`<img class="note-img" src="${n.image}" alt="">`:'';
       return `<span class="note-shadow" aria-hidden="true"></span>
-        <div class="tag-row"><span class="tag">${n.tag||'其他'}</span></div>
-        <div class="note-status"><span>${n.weather}</span><span>${n.mood}</span></div>
+        <div class="tag-row"><span class="tag">${escapeText(n.tag||'其他')}</span></div>
+        <div class="note-status"><span>${escapeText(n.weather||'')}</span><span>${escapeText(n.mood||'')}</span></div>
         <div class="note-title">${escapeText(noteTitle(n))}</div>${img}
         <div class="note-actions"><button class="mini-btn finish">Finish</button><button class="mini-btn del">×</button></div>`;
     }
@@ -2100,7 +2348,7 @@
       });
       setTimeout(()=>{
         state.notes=state.notes.filter(x=>x.id!==id);
-        state.completed.push({...n,shape:normalizeShape(n.shape),completedAt:Date.now(),starColor:n.color});
+        state.completed.push({...n,shape:normalizeShape(n.shape),reminderAt:'',reminderNotifiedAt:'',reminderSetAt:'',completedAt:Date.now(),starColor:n.color});
         state.stars=state.completed.length;
         if(state.stars % 10 === 0)bottleFilledPending=true;
         save();
@@ -2351,13 +2599,16 @@
       }
       $('#detailPhotoBtn').textContent=detailDraftImage?'更换图片':'添加图片';
       $('#detailPhotoRemoveBtn').style.display=detailDraftImage?'inline-flex':'none';
+      $('#detailPhotoAddBtn').textContent=detailDraftImage?'更换图片':'添加图片';
     }
 
     function openDetail(id){
       const n=state.notes.find(x=>x.id===id); if(!n)return;
       editingNoteId=id;
+      updateReminderInputMins();
       $('#detailTitle').value=n.title||noteTitle(n);
       $('#detailText').value=n.text||'';
+      $('#detailReminder').value=isoToDatetimeLocal(n.reminderAt||'');
       updateDetailImagePanel(n.image||'');
       $('#detailModal').classList.add('show');
     }
@@ -2534,7 +2785,7 @@ function renderSearchResults(){
       submit.textContent='Enter';
     };
 
-    $('#addBtn').onclick=()=>{$('#noteModal').classList.add('show'); initChoices()};
+    $('#addBtn').onclick=()=>{updateReminderInputMins(); $('#noteModal').classList.add('show'); initChoices()};
     document.querySelectorAll('.mode-btn').forEach(btn=>btn.onclick=()=>{
       state.boardMode=btn.dataset.mode;
       renderBoardMode();
@@ -2546,14 +2797,35 @@ function renderSearchResults(){
     document.querySelector('.achievement-card').onclick=openArchive;
     canvas.addEventListener('pointerdown',startCanvasPan);
     $('#noteSearchInput').oninput=renderSearchResults;
+    $('#enableNotifyBtn').onclick=async ()=>{
+      if(!('Notification' in window)){
+        alert('当前浏览器不支持通知。iPhone 请用 Safari 打开，并把网页添加到主屏幕后再尝试。');
+        renderNotificationStatus();
+        return;
+      }
+      const result=await Notification.requestPermission();
+      renderNotificationStatus();
+      if(result==='granted'){
+        await showLocalNotification('Folding Stars 提醒已开启','之后可以给便签设置提醒时间。');
+        setSyncStatus('轻量提醒已开启');
+        scheduleReminderCheck();
+      }
+    };
+    $('#testNotifyBtn').onclick=async ()=>{
+      const ok=await showLocalNotification('Folding Stars 测试提醒','如果你看到了这条通知，轻量提醒已经可以工作。');
+      if(!ok)alert('还不能发送通知，请先开启提醒权限。');
+    };
     $('#notePhotoBtn').onclick=()=>$('#notePhotoInput').click();
     $('#notePhotoInput').onchange=e=>handlePickedImage(e.target,img=>{selected.image=img; $('#notePhotoPreview').src=img; $('#notePhotoPreview').classList.add('show')},640,'notes','draft');
+    $("#detailPhotoAddBtn").onclick=()=>$("#detailPhotoInput").click();
     $("#detailPhotoBtn").onclick=()=>$("#detailPhotoInput").click();
     $("#detailPhotoInput").onchange=e=>handlePickedImage(e.target,img=>updateDetailImagePanel(img),640,'notes',editingNoteId||'detail');
     $("#detailPhotoRemoveBtn").onclick=()=>updateDetailImagePanel("");
     $("#createNoteBtn").onclick=()=>{
       const text=$("#contentInput").value.trim();
       const title=$("#titleInput").value.trim()||text.slice(0,18)||"写点什么...";
+      const reminderAt=readReminder($("#reminderInput"));
+      const reminderSetAt=reminderAt?new Date().toISOString():'';
       const pos=nextNotePosition(selected.shape);
       const newId=uid();
       state.notes.push({
@@ -2564,6 +2836,9 @@ function renderSearchResults(){
         mood:selected.mood,
         tag:$("#tagInput").value.trim()||"其他",
         title,text,image:selected.image,
+        reminderAt,
+        reminderSetAt,
+        reminderNotifiedAt:"",
         x:pos.x,
         y:pos.y
       });
@@ -2572,6 +2847,7 @@ function renderSearchResults(){
       $("#tagInput").value="";
       $("#titleInput").value="";
       $("#contentInput").value="";
+      $("#reminderInput").value="";
       selected.image="";
       $("#notePhotoPreview").classList.remove("show");
       $("#notePhotoPreview").removeAttribute("src");
@@ -2584,6 +2860,15 @@ function renderSearchResults(){
       n.title=$("#detailTitle").value.trim()||"写点什么...";
       n.text=$("#detailText").value.trim();
       n.image=detailDraftImage||"";
+      const nextReminder=readReminder($("#detailReminder"));
+      if(nextReminder!==n.reminderAt){
+        n.reminderNotifiedAt="";
+        n.reminderSetAt=nextReminder?new Date().toISOString():'';
+      }else if(nextReminder && !n.reminderSetAt){
+        n.reminderSetAt=new Date().toISOString();
+      }
+      if(!nextReminder)n.reminderSetAt='';
+      n.reminderAt=nextReminder;
       save();
       renderNotes();
       $("#detailModal").classList.remove("show");
@@ -2617,6 +2902,13 @@ function renderSearchResults(){
       if(remoteDirty)scheduleRemoteSave();
     });
     addEventListener('resize',()=>renderNotes());
+    addEventListener('focus',()=>{renderNotificationStatus(); checkDueReminders()});
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden){
+        renderNotificationStatus();
+        checkDueReminders();
+      }
+    });
     if('serviceWorker' in navigator && location.protocol !== 'file:'){
       addEventListener('load',()=>{
         navigator.serviceWorker.register('./service-worker.js').catch(err=>{
@@ -2630,4 +2922,5 @@ function renderSearchResults(){
   </script>
 </body>
 </html>
+
 

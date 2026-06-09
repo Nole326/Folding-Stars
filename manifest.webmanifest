@@ -1,15 +1,13 @@
-{
+﻿{
   "name": "Folding Stars",
   "short_name": "Folding Stars",
-  "description": "低饱和马卡龙风格的个人备忘录与星星收集应用。",
-  "lang": "zh-CN",
-  "start_url": "./index.html",
+  "description": "A pastel personal memo app that folds finished notes into collectible stars.",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#fbf5ea",
-  "theme_color": "#fbf5ea",
-  "categories": ["productivity", "lifestyle"],
+  "orientation": "portrait",
+  "background_color": "#fbf4e8",
+  "theme_color": "#fbf4e8",
   "icons": [
     {
       "src": "./icons/icon-192.png",

@@ -1,4 +1,4 @@
-const CACHE_NAME = "folding-stars-pwa-v3";
+const CACHE_NAME = "folding-stars-pwa-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -36,10 +36,15 @@ self.addEventListener("fetch", event => {
       fetch(request)
         .then(response => {
           const copy = response.clone();
-          if (response.ok) caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
+          if (response.ok) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put("./index.html", copy.clone());
+              cache.put("./", response.clone());
+            });
+          }
           return response;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() => caches.match("./").then(cached => cached || caches.match("./index.html")))
     );
     return;
   }
@@ -52,6 +57,20 @@ self.addEventListener("fetch", event => {
         if (response.ok) caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
         return response;
       });
+    })
+  );
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if ("focus" in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+      return undefined;
     })
   );
 });
